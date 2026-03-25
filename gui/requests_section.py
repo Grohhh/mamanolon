@@ -15,33 +15,33 @@ class RequestsSection(SectionBase):
     
     def init_content(self):
         layout = QVBoxLayout()
-        
+
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels(['ID', 'Номер', 'Оборудование', 'Дата', 'Описание', 'Тип работ', 'Статус'])
         self.table.cellClicked.connect(self.select_row)
         layout.addWidget(self.table)
-        
+
         form_layout = QHBoxLayout()
-        
+
         form_layout.addWidget(QLabel("Оборудование:"))
         self.equipment_combo = QComboBox()
         self.load_equipment()
         form_layout.addWidget(self.equipment_combo)
-        
+
         form_layout.addWidget(QLabel("Тип работ:"))
         self.work_type = QComboBox()
         self.work_type.addItems(['ремонт', 'диагностика', 'обслуживание', 'замена комплектующих'])
         self.work_type.setEditable(True)
         form_layout.addWidget(self.work_type)
-        
+
         form_layout.addWidget(QLabel("Приоритет:"))
         self.priority = QComboBox()
         self.priority.addItems(['3 - Средний', '1 - Высокий', '2 - Выше среднего', '4 - Ниже среднего', '5 - Низкий'])
         form_layout.addWidget(self.priority)
-        
+
         layout.addLayout(form_layout)
-        
+
         desc_layout = QHBoxLayout()
         desc_layout.addWidget(QLabel("Описание:"))
         self.description = QTextEdit()
@@ -49,7 +49,7 @@ class RequestsSection(SectionBase):
         self.description.setPlaceholderText("Опишите проблему...")
         desc_layout.addWidget(self.description)
         layout.addLayout(desc_layout)
-        
+
         btn_layout = QHBoxLayout()
 
         self.add_btn = QPushButton("Создать заявку")
@@ -85,14 +85,14 @@ class RequestsSection(SectionBase):
         if not equipment_id:
             QMessageBox.warning(self, "Ошибка", "Выберите оборудование")
             return
-        
+
         if not self.description.toPlainText().strip():
             QMessageBox.warning(self, "Ошибка", "Введите описание")
             return
-        
+
         priority_text = self.priority.currentText()
         priority = int(priority_text.split(' - ')[0])
-        
+
         if Request.add(equipment_id, self.description.toPlainText(),
                       self.work_type.currentText(), priority):
             QMessageBox.information(self, "Успех", "Заявка создана")
@@ -105,14 +105,21 @@ class RequestsSection(SectionBase):
         if not self.selected_id:
             QMessageBox.warning(self, "Ошибка", "Выберите заявку")
             return
-        
+
         if Request.close_request(self.selected_id):
             QMessageBox.information(self, "Успех", "Заявка закрыта")
             self.selected_id = None
             self.load_data()
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось закрыть заявку")
-    
+
+    def clear_inputs(self):
+        self.description.clear()
+        self.equipment_combo.setCurrentIndex(0)
+        self.priority.setCurrentIndex(0)
+        self.work_type.setCurrentIndex(0)
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = RequestsSection()
