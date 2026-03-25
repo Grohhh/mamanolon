@@ -121,7 +121,6 @@ class RegisterDialog(QDialog):
         self.role_combo = QComboBox()
         self.role_combo.addItem("Администратор", "admin")
         self.role_combo.addItem("Завхоз", "manager")
-        self.role_combo.addItem("Бухгалтер", "accountant")
         form.addRow("Роль:", self.role_combo)
         
         warning_label = QLabel("⚠️ Роль 'Администратор' дает полный доступ ко всем функциям системы!")
