@@ -64,17 +64,17 @@ class ReportsSection(SectionBase):
         conn = get_connection()
         if conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, number FROM audiences ORDER BY number")
+            cursor.execute("SELECT audience_id, number FROM audiences ORDER BY number")
             for row in cursor.fetchall():
                 self.audience_combo.addItem(row[1], row[0])
             cursor.close()
             conn.close()
-    
+
     def load_responsible(self):
         conn = get_connection()
         if conn:
             cursor = conn.cursor()
-            cursor.execute("""SELECT id, last_name || ' ' || first_name FROM responsible_persons ORDER BY last_name""")
+            cursor.execute("""SELECT responsible_person_id, last_name || ' ' || first_name FROM responsible_persons ORDER BY last_name""")
             for row in cursor.fetchall():
                 self.responsible_combo.addItem(row[1], row[0])
             cursor.close()
@@ -84,90 +84,98 @@ class ReportsSection(SectionBase):
         report_index = self.report_type.currentIndex()
         audience_id = self.audience_combo.currentData()
         responsible_id = self.responsible_combo.currentData()
-        
+
         conn = get_connection()
         if not conn:
             QMessageBox.critical(self, "Ошибка", "Нет подключения к БД")
             return
-        
+
         try:
             cursor = conn.cursor()
-            
+
             if report_index == 0:
                 if audience_id:
                     cursor.execute("""
                         SELECT e.inventory_number, e.name, e.manufacturer, e.model,
-                                   et.name, e.status, e.cost
+                               et.name, a.number, COALESCE(rp.last_name || ' ' || rp.first_name, '-'),
+                               e.status, e.cost
                         FROM equipment e
-                        LEFT JOIN equipment_types et ON e.type_id = et.id
+                        LEFT JOIN equipment_types et ON e.equipment_type_id = et.equipment_type_id
+                        LEFT JOIN audiences a ON e.audience_id = a.audience_id
+                        LEFT JOIN responsible_persons rp ON a.responsible_person_id = rp.responsible_person_id
                         WHERE e.audience_id = %s
                         ORDER BY e.inventory_number""", (audience_id,))
+                    headers = ['Инв.номер', 'Название', 'Производитель', 'Модель', 'Тип', 'Аудитория', 'Ответственный', 'Статус', 'Стоимость']
                 else:
                     cursor.execute("""
                         SELECT a.number, e.inventory_number, e.name, e.manufacturer,
-                               et.name, e.status, e.cost
+                               et.name, COALESCE(rp.last_name || ' ' || rp.first_name, '-'),
+                               e.status, e.cost
                         FROM equipment e
-                        LEFT JOIN equipment_types et ON e.type_id = et.id
-                        LEFT JOIN audiences a ON e.audience_id = a.id
+                        LEFT JOIN equipment_types et ON e.equipment_type_id = et.equipment_type_id
+                        LEFT JOIN audiences a ON e.audience_id = a.audience_id
+                        LEFT JOIN responsible_persons rp ON a.responsible_person_id = rp.responsible_person_id
                         ORDER BY a.number, e.inventory_number""")
-                headers = ['Аудитория' if not audience_id else 'Инв.номер', 'Название', 'Производитель', 'Модель', 'Тип', 'Статус', 'Стоимость']
-                
+                    headers = ['Аудитория', 'Инв.номер', 'Название', 'Производитель', 'Тип', 'Ответственный', 'Статус', 'Стоимость']
+
             elif report_index == 1:
                 cursor.execute("""
-                    SELECT e.inventory_number, e.name, rr.request_number, 
-                           rr.request_date, rr.status, rr.work_type
+                    SELECT e.inventory_number, e.name, r.request_number,
+                           r.created_at, r.status, r.work_type
                     FROM equipment e
-                    JOIN repair_requests rr ON e.id = rr.equipment_id
-                    WHERE rr.status IN ('открыта', 'в работе')
-                    ORDER BY rr.request_date DESC""")
+                    JOIN requests r ON e.equipment_id = r.equipment_id
+                    WHERE r.status IN ('открыта', 'в работе')
+                    ORDER BY r.created_at DESC""")
                 headers = ['Инв.номер', 'Название', 'Заявка', 'Дата', 'Статус', 'Тип работ']
-                
+
             elif report_index == 2:
+                # Отчёт по оборудованию, закреплённому за материально-ответственным лицом
                 if responsible_id:
                     cursor.execute("""
-                        SELECT e.inventory_number, e.name, e.manufacturer,
+                        SELECT e.inventory_number, e.name, e.manufacturer, e.model,
                                a.number, e.status
                         FROM equipment e
-                        LEFT JOIN audiences a ON e.audience_id = a.id
-                        WHERE e.responsible_id = %s
+                        JOIN audiences a ON e.audience_id = a.audience_id
+                        WHERE a.responsible_person_id = %s
                         ORDER BY e.inventory_number""", (responsible_id,))
+                    headers = ['Инв.номер', 'Название', 'Производитель', 'Модель', 'Аудитория', 'Статус']
                 else:
                     cursor.execute("""
                         SELECT rp.last_name || ' ' || rp.first_name,
                                e.inventory_number, e.name, a.number, e.status
                         FROM responsible_persons rp
-                        LEFT JOIN equipment e ON rp.id = e.responsible_id
-                        LEFT JOIN audiences a ON e.audience_id = a.id
+                        LEFT JOIN audiences a ON rp.responsible_person_id = a.responsible_person_id
+                        LEFT JOIN equipment e ON a.audience_id = e.audience_id
                         ORDER BY rp.last_name, e.inventory_number""")
-                headers = ['Ответственный' if not responsible_id else 'Инв.номер', 
-                          'Название', 'Производитель', 'Аудитория', 'Статус']
-                
+                    headers = ['Ответственный', 'Инв.номер', 'Название', 'Аудитория', 'Статус']
+
             else:
                 cursor.execute("""
                     SELECT e.inventory_number, e.name, e.manufacturer, e.model,
-                           et.name, a.number, rp.last_name || ' ' || rp.first_name, e.status
+                           et.name, a.number, COALESCE(rp.last_name || ' ' || rp.first_name, '-'),
+                           e.status
                     FROM equipment e
-                    LEFT JOIN equipment_types et ON e.type_id = et.id
-                    LEFT JOIN audiences a ON e.audience_id = a.id
-                    LEFT JOIN responsible_persons rp ON e.responsible_id = rp.id
+                    LEFT JOIN equipment_types et ON e.equipment_type_id = et.equipment_type_id
+                    LEFT JOIN audiences a ON e.audience_id = a.audience_id
+                    LEFT JOIN responsible_persons rp ON a.responsible_person_id = rp.responsible_person_id
                     ORDER BY e.inventory_number""")
                 headers = ['Инв.номер', 'Название', 'Производитель', 'Модель', 'Тип', 'Аудитория', 'Ответственный', 'Статус']
-            
+
             rows = cursor.fetchall()
             cursor.close()
             conn.close()
-            
+
             self.result_table.setColumnCount(len(headers))
             self.result_table.setHorizontalHeaderLabels(headers)
             self.result_table.setRowCount(len(rows))
-            
+
             for row_idx, row_data in enumerate(rows):
                 for col_idx, value in enumerate(row_data):
-                    self.result_table.setItem(row_idx, col_idx, 
+                    self.result_table.setItem(row_idx, col_idx,
                                             QTableWidgetItem(str(value) if value else ""))
-            
+
             QMessageBox.information(self, "Успех", f"Отчет сформирован ({len(rows)} записей)")
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
     
