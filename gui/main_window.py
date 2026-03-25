@@ -9,6 +9,7 @@ from gui.responsible_section import ResponsibleSection
 from gui.requests_section import RequestsSection
 from gui.reports_section import ReportsSection
 from gui.admin_section import AdminSection
+from gui.movement_history_section import MovementHistorySection
 import sys
 class AppWindow(QMainWindow):
     
@@ -45,17 +46,19 @@ class AppWindow(QMainWindow):
                 section = EquipmentSection(self.current_user)
             elif section_name == 'requests':
                 section = RequestsSection()
+            elif section_name == 'movement_history':
+                section = MovementHistorySection()
             elif section_name == 'reports':
                 section = ReportsSection()
             elif section_name == 'admin':
                 section = AdminSection()
             else:
                 return
-            
+
             section.back_signal.connect(self.show_menu)
             self.sections[section_name] = section
             self.stack.addWidget(section)
-        
+
         self.stack.setCurrentWidget(self.sections[section_name])
     
     def show_menu(self):
