@@ -1,7 +1,11 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-                             QPushButton, QTableWidget, QTableWidgetItem, QMessageBox, QApplication)
+                             QPushButton, QTableWidget, QTableWidgetItem, QMessageBox,
+                             QComboBox, QApplication)
+from PyQt5.QtCore import Qt
 from gui.section_base import SectionBase
 from models.audience import Audience
+from models.responsible import Responsible
+from database.connection import get_connection
 import sys
 class AudienceSection(SectionBase):
     
@@ -15,33 +19,39 @@ class AudienceSection(SectionBase):
         layout = QVBoxLayout()
         
         self.table = QTableWidget()
-        self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(['ID', 'Номер', 'Этаж', 'Корпус', 'Площадь', 'Мест'])
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels(['ID', 'Номер', 'Этаж', 'Корпус', 'Площадь', 'Вместимость', 'Ответственный'])
         self.table.cellClicked.connect(self.select_row)
         layout.addWidget(self.table)
-        
+
         form_layout = QHBoxLayout()
-        
+
         form_layout.addWidget(QLabel("Номер:"))
         self.number_input = QLineEdit()
         form_layout.addWidget(self.number_input)
-        
+
         form_layout.addWidget(QLabel("Этаж:"))
         self.floor_input = QLineEdit()
         form_layout.addWidget(self.floor_input)
-        
+
         form_layout.addWidget(QLabel("Корпус:"))
         self.building_input = QLineEdit()
         form_layout.addWidget(self.building_input)
-        
+
         form_layout.addWidget(QLabel("Площадь:"))
         self.area_input = QLineEdit()
         form_layout.addWidget(self.area_input)
-        
-        form_layout.addWidget(QLabel("Мест:"))
-        self.seats_input = QLineEdit()
-        form_layout.addWidget(self.seats_input)
-        
+
+        form_layout.addWidget(QLabel("Вместимость:"))
+        self.capacity_input = QLineEdit()
+        form_layout.addWidget(self.capacity_input)
+
+        form_layout.addWidget(QLabel("Ответственный:"))
+        self.resp_combo = QComboBox()
+        self.resp_combo.addItem("Не назначен", None)
+        self.load_responsible()
+        form_layout.addWidget(self.resp_combo)
+
         layout.addLayout(form_layout)
         
         btn_layout = QHBoxLayout()
@@ -68,34 +78,44 @@ class AudienceSection(SectionBase):
             self.table.insertRow(row_idx)
             for col_idx, value in enumerate(row_data):
                 self.table.setItem(row_idx, col_idx, QTableWidgetItem(str(value) if value else ""))
-    
+
+    def load_responsible(self):
+        self.resp_combo.clear()
+        self.resp_combo.addItem("Не назначен", None)
+        for r in Responsible.get_all():
+            self.resp_combo.addItem(f"{r[1]} {r[2]}", r[0])
+
     def select_row(self, row, _):
         self.selected_id = self.table.item(row, 0).text()
         self.number_input.setText(self.table.item(row, 1).text() or "")
         self.floor_input.setText(self.table.item(row, 2).text() or "")
         self.building_input.setText(self.table.item(row, 3).text() or "")
         self.area_input.setText(self.table.item(row, 4).text() or "")
-        self.seats_input.setText(self.table.item(row, 5).text() or "")
-    
+        self.capacity_input.setText(self.table.item(row, 5).text() or "")
+        
+        resp_name = self.table.item(row, 6).text() if self.table.item(row, 6) else ""
+        index = self.resp_combo.findText(resp_name.split()[0] if resp_name else "", Qt.MatchStartsWith)
+        self.resp_combo.setCurrentIndex(index if index >= 0 else 0)
+
     def add_record(self):
         number = self.number_input.text().strip()
         if not number:
             QMessageBox.warning(self, "Ошибка", "Введите номер аудитории")
             return
-        
-        if Audience.add(number, self.floor_input.text() or None, self.building_input.text() or None, self.area_input.text() or None, self.seats_input.text() or None):
+
+        if Audience.add(number, self.floor_input.text() or None, self.building_input.text() or None, self.area_input.text() or None, self.capacity_input.text() or None, self.resp_combo.currentData()):
             QMessageBox.information(self, "Успех", "Аудитория добавлена")
             self.clear_inputs()
             self.load_data()
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось добавить аудиторию")
-    
+
     def edit_record(self):
         if not self.selected_id:
             QMessageBox.warning(self, "Ошибка", "Выберите аудиторию")
             return
-        
-        if Audience.update(self.selected_id, self.number_input.text(), self.floor_input.text() or None, self.building_input.text() or None, self.area_input.text() or None, self.seats_input.text() or None):
+
+        if Audience.update(self.selected_id, self.number_input.text(), self.floor_input.text() or None, self.building_input.text() or None, self.area_input.text() or None, self.capacity_input.text() or None, self.resp_combo.currentData()):
             QMessageBox.information(self, "Успех", "Данные обновлены")
             self.clear_inputs()
             self.selected_id = None
@@ -125,7 +145,8 @@ class AudienceSection(SectionBase):
         self.floor_input.clear()
         self.building_input.clear()
         self.area_input.clear()
-        self.seats_input.clear()
+        self.capacity_input.clear()
+        self.resp_combo.setCurrentIndex(0)
 
 
 if __name__ == "__main__":
