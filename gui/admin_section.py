@@ -34,7 +34,7 @@ class AdminSection(SectionBase):
         
         form_layout.addWidget(QLabel("Роль:"))
         self.role_combo = QComboBox()
-        self.role_combo.addItems(['admin', 'manager', 'accountant'])
+        self.role_combo.addItems(['admin', 'manager'])
         form_layout.addWidget(self.role_combo)
         
         form_layout.addWidget(QLabel("ФИО:"))
