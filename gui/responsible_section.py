@@ -15,43 +15,39 @@ class ResponsibleSection(SectionBase):
         layout = QVBoxLayout()
         
         self.table = QTableWidget()
-        self.table.setColumnCount(8)
-        self.table.setHorizontalHeaderLabels(['ID', 'Фамилия', 'Имя', 'Отчество', 'Должность', 'Телефон', 'Email', 'Отдел'])
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels(['ID', 'Фамилия', 'Имя', 'Должность', 'Телефон', 'Email', 'Отдел'])
         self.table.cellClicked.connect(self.select_row)
         layout.addWidget(self.table)
-        
+
         form_layout1 = QHBoxLayout()
         form_layout1.addWidget(QLabel("Фамилия:"))
         self.last_name = QLineEdit()
         form_layout1.addWidget(self.last_name)
-        
+
         form_layout1.addWidget(QLabel("Имя:"))
         self.first_name = QLineEdit()
         form_layout1.addWidget(self.first_name)
-        
-        form_layout1.addWidget(QLabel("Отчество:"))
-        self.middle_name = QLineEdit()
-        form_layout1.addWidget(self.middle_name)
-        
+
         layout.addLayout(form_layout1)
-        
+
         form_layout2 = QHBoxLayout()
         form_layout2.addWidget(QLabel("Должность:"))
         self.position = QLineEdit()
         form_layout2.addWidget(self.position)
-        
+
         form_layout2.addWidget(QLabel("Телефон:"))
         self.phone = QLineEdit()
         form_layout2.addWidget(self.phone)
-        
+
         form_layout2.addWidget(QLabel("Email:"))
         self.email = QLineEdit()
         form_layout2.addWidget(self.email)
-        
+
         form_layout2.addWidget(QLabel("Отдел:"))
         self.department = QLineEdit()
         form_layout2.addWidget(self.department)
-        
+
         layout.addLayout(form_layout2)
         
         btn_layout = QHBoxLayout()
@@ -83,30 +79,29 @@ class ResponsibleSection(SectionBase):
         self.selected_id = self.table.item(row, 0).text()
         self.last_name.setText(self.table.item(row, 1).text() or "")
         self.first_name.setText(self.table.item(row, 2).text() or "")
-        self.middle_name.setText(self.table.item(row, 3).text() or "")
-        self.position.setText(self.table.item(row, 4).text() or "")
-        self.phone.setText(self.table.item(row, 5).text() or "")
-        self.email.setText(self.table.item(row, 6).text() or "")
-        self.department.setText(self.table.item(row, 7).text() or "")
-    
+        self.position.setText(self.table.item(row, 3).text() or "")
+        self.phone.setText(self.table.item(row, 4).text() or "")
+        self.email.setText(self.table.item(row, 5).text() or "")
+        self.department.setText(self.table.item(row, 6).text() or "")
+
     def add_record(self):
         if not self.last_name.text().strip() or not self.first_name.text().strip():
             QMessageBox.warning(self, "Ошибка", "Введите фамилию и имя")
             return
-        
-        if Responsible.add(self.last_name.text(), self.first_name.text(), self.middle_name.text() or None, self.position.text() or None, self.phone.text() or None, self.email.text() or None, self.department.text() or None):
+
+        if Responsible.add(self.last_name.text(), self.first_name.text(), self.position.text() or None, self.phone.text() or None, self.email.text() or None, self.department.text() or None):
             QMessageBox.information(self, "Успех", "Ответственное лицо добавлено")
             self.clear_inputs()
             self.load_data()
         else:
             QMessageBox.critical(self, "Ошибка", "Не удалось добавить лицо")
-    
+
     def edit_record(self):
         if not self.selected_id:
             QMessageBox.warning(self, "Ошибка", "Выберите лицо")
             return
-        
-        if Responsible.update(self.selected_id, self.last_name.text(), self.first_name.text(), self.middle_name.text() or None, self.position.text() or None, self.phone.text() or None, self.email.text() or None, self.department.text() or None):
+
+        if Responsible.update(self.selected_id, self.last_name.text(), self.first_name.text(), self.position.text() or None, self.phone.text() or None, self.email.text() or None, self.department.text() or None):
             QMessageBox.information(self, "Успех", "Данные обновлены")
             self.clear_inputs()
             self.selected_id = None
@@ -135,7 +130,6 @@ class ResponsibleSection(SectionBase):
     def clear_inputs(self):
         self.last_name.clear()
         self.first_name.clear()
-        self.middle_name.clear()
         self.position.clear()
         self.phone.clear()
         self.email.clear()
