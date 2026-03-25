@@ -1,8 +1,12 @@
 from database.connection import get_connection
 from PyQt5.QtWidgets import QApplication
 import sys
+
+
 class Request:
-    
+
+    STATUSES = ['открыта', 'в работе', 'закрыта', 'отменена']
+
     def get_all():
         conn = get_connection()
         if not conn:
@@ -10,11 +14,11 @@ class Request:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT rr.id, rr.request_number, e.name, rr.request_date,
-                       rr.description, rr.work_type, rr.status
-                FROM repair_requests rr
-                JOIN equipment e ON rr.equipment_id = e.id
-                ORDER BY rr.id DESC
+                SELECT r.request_id, r.request_number, e.name,
+                       r.created_at, r.description, r.work_type, r.status
+                FROM requests r
+                JOIN equipment e ON r.equipment_id = e.equipment_id
+                ORDER BY r.request_id DESC
             """)
             rows = cursor.fetchall()
             cursor.close()
@@ -23,20 +27,20 @@ class Request:
         except Exception as e:
             print(f"Ошибка получения заявок: {e}")
             return []
-    
-    def add(equipment_id, description, work_type='ремонт', priority=3):
+
+    def add(equipment_id, description, work_type='ремонт', priority=3, user_id=None):
         conn = get_connection()
         if not conn:
             return False
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO repair_requests (request_number, equipment_id, description, work_type, priority)
+                INSERT INTO requests (request_number, equipment_id, description, work_type, priority, user_id)
                 VALUES (
-                    CONCAT('R', TO_CHAR(CURRENT_DATE, 'YYYYMMDD'), '-', LPAD(nextval('repair_requests_id_seq')::TEXT, 4, '0')),
-                    %s, %s, %s, %s
+                    CONCAT('R', TO_CHAR(CURRENT_DATE, 'YYYYMMDD'), '-', LPAD(nextval('requests_request_id_seq')::TEXT, 4, '0')),
+                    %s, %s, %s, %s, %s
                 )
-            """, (equipment_id, description, work_type, priority))
+            """, (equipment_id, description, work_type, priority, user_id))
             conn.commit()
             cursor.close()
             conn.close()
@@ -44,7 +48,7 @@ class Request:
         except Exception as e:
             print(f"Ошибка создания заявки: {e}")
             return False
-    
+
     def close_request(request_id):
         conn = get_connection()
         if not conn:
@@ -52,8 +56,9 @@ class Request:
         try:
             cursor = conn.cursor()
             cursor.execute("""
-                UPDATE repair_requests SET status = 'закрыта', completion_date = CURRENT_TIMESTAMP
-                WHERE id = %s
+                UPDATE requests
+                SET status = 'закрыта', updated_at = CURRENT_TIMESTAMP
+                WHERE request_id = %s
             """, (request_id,))
             conn.commit()
             cursor.close()
@@ -61,6 +66,25 @@ class Request:
             return True
         except Exception as e:
             print(f"Ошибка закрытия заявки: {e}")
+            return False
+
+    def update_status(request_id, status):
+        conn = get_connection()
+        if not conn:
+            return False
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE requests
+                SET status = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE request_id = %s
+            """, (status, request_id))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"Ошибка обновления статуса заявки: {e}")
             return False
 
 
